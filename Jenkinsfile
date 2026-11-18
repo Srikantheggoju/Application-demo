@@ -5,8 +5,6 @@ pipeline {
         FRONTEND_IMAGE = "srikantheggoju/food-frontend"
         BACKEND_IMAGE  = "srikantheggoju/food-backend"
         TAG = "${BUILD_NUMBER}"
-
-        GITOPS_REPO = "https://github.com/YOUR_GITHUB_USERNAME/food-ordering-gitops.git"
     }
 
     stages {
@@ -73,53 +71,4 @@ pipeline {
                     sh '''
                     rm -rf gitops
 
-                    git clone https://$GIT_USER:$GIT_PASS@github.com/YOUR_GITHUB_USERNAME/food-ordering-gitops.git gitops
-                    '''
-                }
-            }
-        }
-
-        stage('Update Helm Values') {
-            steps {
-                sh '''
-                sed -i "s/tag:.*/tag: $TAG/g" gitops/helm-chart/values.yaml
-                '''
-            }
-        }
-
-        stage('Commit and Push Changes') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'gittoken',
-                        usernameVariable: 'GIT_USER',
-                        passwordVariable: 'GIT_PASS'
-                    )
-                ]) {
-                    sh '''
-                    cd gitops
-
-                    git config user.email "jenkins@local.com"
-                    git config user.name "Jenkins"
-
-                    git add .
-
-                    git commit -m "Updated image tags to build $TAG" || true
-
-                    git push https://$GIT_USER:$GIT_PASS@github.com/YOUR_GITHUB_USERNAME/food-ordering-gitops.git main
-                    '''
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            echo 'CI/CD Pipeline Completed Successfully'
-        }
-
-        failure {
-            echo 'Pipeline Failed'
-        }
-    }
-}
+                    git clone https://$GIT_USER:$GIT_PASS@github.com/Srikantheggoju/food
