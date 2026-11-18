@@ -71,4 +71,53 @@ pipeline {
                     sh '''
                     rm -rf gitops
 
-                    git clone https://$GIT_USER:$GIT_PASS@github.com/Srikantheggoju/food
+                    git clone https://$GIT_USER:$GIT_PASS@github.com/Srikantheggoju/food-gitops.git gitops
+                    '''
+                }
+            }
+        }
+
+        stage('Update Helm Values') {
+            steps {
+                sh '''
+                sed -i "s/tag:.*/tag: $TAG/g" gitops/helm-chart/values.yaml
+                '''
+            }
+        }
+
+        stage('Commit and Push Changes') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'gittoken',
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_PASS'
+                    )
+                ]) {
+                    sh '''
+                    cd gitops
+
+                    git config user.email "jenkins@local.com"
+                    git config user.name "Jenkins"
+
+                    git add .
+
+                    git commit -m "Updated image tags to build $TAG" || true
+
+                    git push https://$GIT_USER:$GIT_PASS@github.com/Srikantheggoju/food-gitops.git main
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI/CD Pipeline Completed Successfully'
+        }
+
+        failure {
+            echo 'Pipeline Failed'
+        }
+    }
+}
