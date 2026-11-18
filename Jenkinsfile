@@ -4,7 +4,6 @@ pipeline {
     environment {
         FRONTEND_IMAGE = "srikantheggoju/food-frontend"
         BACKEND_IMAGE  = "srikantheggoju/food-backend"
-
         TAG = "${BUILD_NUMBER}"
 
         GITOPS_REPO = "https://github.com/YOUR_GITHUB_USERNAME/food-ordering-gitops.git"
@@ -21,9 +20,7 @@ pipeline {
         stage('Build Frontend Image') {
             steps {
                 dir('frontend') {
-                    sh '''
-                    docker build -t $FRONTEND_IMAGE:$TAG .
-                    '''
+                    sh 'docker build -t $FRONTEND_IMAGE:$TAG .'
                 }
             }
         }
@@ -31,9 +28,7 @@ pipeline {
         stage('Build Backend Image') {
             steps {
                 dir('backend') {
-                    sh '''
-                    docker build -t $BACKEND_IMAGE:$TAG .
-                    '''
+                    sh 'docker build -t $BACKEND_IMAGE:$TAG .'
                 }
             }
         }
@@ -56,17 +51,13 @@ pipeline {
 
         stage('Push Frontend Image') {
             steps {
-                sh '''
-                docker push $FRONTEND_IMAGE:$TAG
-                '''
+                sh 'docker push $FRONTEND_IMAGE:$TAG'
             }
         }
 
         stage('Push Backend Image') {
             steps {
-                sh '''
-                docker push $BACKEND_IMAGE:$TAG
-                '''
+                sh 'docker push $BACKEND_IMAGE:$TAG'
             }
         }
 
@@ -74,12 +65,11 @@ pipeline {
             steps {
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'gitops-creds',
+                        credentialsId: 'gittoken',
                         usernameVariable: 'GIT_USER',
                         passwordVariable: 'GIT_PASS'
                     )
                 ]) {
-
                     sh '''
                     rm -rf gitops
 
@@ -92,22 +82,20 @@ pipeline {
         stage('Update Helm Values') {
             steps {
                 sh '''
-                sed -i "s/tag:.*/tag: $TAG/" gitops/helm-chart/values.yaml
+                sed -i "s/tag:.*/tag: $TAG/g" gitops/helm-chart/values.yaml
                 '''
             }
         }
 
         stage('Commit and Push Changes') {
             steps {
-
                 withCredentials([
                     usernamePassword(
-                        credentialsId: 'gitops-creds',
+                        credentialsId: 'gittoken',
                         usernameVariable: 'GIT_USER',
                         passwordVariable: 'GIT_PASS'
                     )
                 ]) {
-
                     sh '''
                     cd gitops
 
@@ -116,12 +104,22 @@ pipeline {
 
                     git add .
 
-                    git commit -m "Updated image tag to $TAG" || true
+                    git commit -m "Updated image tags to build $TAG" || true
 
                     git push https://$GIT_USER:$GIT_PASS@github.com/YOUR_GITHUB_USERNAME/food-ordering-gitops.git main
                     '''
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI/CD Pipeline Completed Successfully'
+        }
+
+        failure {
+            echo 'Pipeline Failed'
         }
     }
 }
