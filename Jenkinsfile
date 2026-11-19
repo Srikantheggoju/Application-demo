@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        sonarQubeScanner 'sonar-scanner'
-    }
-
     environment {
         FRONTEND_IMAGE = "srikantheggoju/food-frontend"
         BACKEND_IMAGE  = "srikantheggoju/food-backend"
@@ -21,13 +17,20 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonar-server') {
-                    sh '''
-                    sonar-scanner \
-                    -Dsonar.projectKey=food-ordering \
-                    -Dsonar.projectName=food-ordering \
-                    -Dsonar.sources=.
-                    '''
+                script {
+
+                    def scannerHome = tool 'sonar-scanner'
+
+                    withSonarQubeEnv('sonar-server') {
+
+                        sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=food-ordering \
+                        -Dsonar.projectName=food-ordering \
+                        -Dsonar.sources=.
+                        """
+
+                    }
                 }
             }
         }
