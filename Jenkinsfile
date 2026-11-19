@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        sonarQubeScanner 'sonar-scanner'
+    }
+
     environment {
         FRONTEND_IMAGE = "srikantheggoju/food-frontend"
         BACKEND_IMAGE  = "srikantheggoju/food-backend"
@@ -15,10 +19,33 @@ pipeline {
             }
         }
 
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                    sh '''
+                    sonar-scanner \
+                    -Dsonar.projectKey=food-ordering \
+                    -Dsonar.projectName=food-ordering \
+                    -Dsonar.sources=.
+                    '''
+                }
+            }
+        }
+
+        stage('Trivy Filesystem Scan') {
+            steps {
+                sh '''
+                trivy fs .
+                '''
+            }
+        }
+
         stage('Build Frontend Image') {
             steps {
                 dir('frontend') {
-                    sh 'docker build -t $FRONTEND_IMAGE:$TAG .'
+                    sh '''
+                    docker build -t $FRONTEND_IMAGE:$TAG .
+                    '''
                 }
             }
         }
@@ -26,8 +53,26 @@ pipeline {
         stage('Build Backend Image') {
             steps {
                 dir('backend') {
-                    sh 'docker build -t $BACKEND_IMAGE:$TAG .'
+                    sh '''
+                    docker build -t $BACKEND_IMAGE:$TAG .
+                    '''
                 }
+            }
+        }
+
+        stage('Trivy Frontend Image Scan') {
+            steps {
+                sh '''
+                trivy image $FRONTEND_IMAGE:$TAG
+                '''
+            }
+        }
+
+        stage('Trivy Backend Image Scan') {
+            steps {
+                sh '''
+                trivy image $BACKEND_IMAGE:$TAG
+                '''
             }
         }
 
@@ -49,13 +94,17 @@ pipeline {
 
         stage('Push Frontend Image') {
             steps {
-                sh 'docker push $FRONTEND_IMAGE:$TAG'
+                sh '''
+                docker push $FRONTEND_IMAGE:$TAG
+                '''
             }
         }
 
         stage('Push Backend Image') {
             steps {
-                sh 'docker push $BACKEND_IMAGE:$TAG'
+                sh '''
+                docker push $BACKEND_IMAGE:$TAG
+                '''
             }
         }
 
@@ -113,7 +162,7 @@ pipeline {
 
     post {
         success {
-            echo 'CI/CD Pipeline Completed Successfully'
+            echo 'DevSecOps GitOps Pipeline Completed Successfully'
         }
 
         failure {
